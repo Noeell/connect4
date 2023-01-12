@@ -56,9 +56,18 @@ class Connect4MainTest implements WithAssertions {
 	}
 
 	@Test
-	void inAGreedyBattleTheFirstPlayerWillWin() {
-		var red = new Connect4ArenaMain.GreedyPlayer();
+	void greedyVsMin() {
+		var red = new Connect4ArenaMain.Connect4MinMaxPlayer(5);
 		var blue = new Connect4ArenaMain.GreedyPlayer();
 		assertThat(newInstance().play(red, blue)).isSameAs(red);
 	}
+
+	@Test
+	void differentDepths() {
+		var red = new Connect4ArenaMain.Connect4MinMaxPlayer(7);
+		var blue = new Connect4ArenaMain.Connect4MinMaxPlayer(2);
+		assertThat(newInstance().play(red, blue)).isSameAs(red);
+	}
+
+
 }
