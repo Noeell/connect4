@@ -19,7 +19,7 @@ public class Connect4ArenaMain {
     static final int NOMOVE = -1;
 
     public static void main(String[] args) {
-        new Connect4ArenaMain().play(new HumanPlayer(), new Connect4MinMaxPlayer(6));
+        new Connect4ArenaMain().play(new HumanPlayer(), new Connect4AlphaBetaPlayer(10));
     }
 
     static String toDebugString(Stone[] board) {
@@ -82,22 +82,14 @@ public class Connect4ArenaMain {
             }
         }
 
-        return board[0] == forColor && board[0] == board[1] && board[1] == board[2] && board[2] == board[3] ||
-                board[1] == forColor && board[1] == board[2] && board[2] == board[3] && board[3] == board[4] ||
-                board[2] == forColor && board[2] == board[3] && board[3] == board[4] && board[4] == board[5] ||
-                board[3] == forColor && board[3] == board[4] && board[4] == board[5] && board[5] == board[6] ||
-                board[7] == forColor && board[7] == board[8] && board[8] == board[9] && board[9] == board[10] ||
-                board[8] == forColor && board[8] == board[9] && board[9] == board[10] && board[10] == board[11] ||
-                board[9] == forColor && board[9] == board[10] && board[10] == board[11] && board[11] == board[12] ||
-                board[10] == forColor && board[10] == board[11] && board[11] == board[12] && board[12] == board[13] ||
-                board[14] == forColor && board[14] == board[15] && board[15] == board[16] && board[16] == board[17] ||
-                board[15] == forColor && board[15] == board[16] && board[16] == board[17] && board[17] == board[18] ||
-                board[16] == forColor && board[16] == board[17] && board[17] == board[18] && board[18] == board[19] ||
-                board[17] == forColor && board[17] == board[18] && board[18] == board[19] && board[19] == board[20] ||
-                board[21] == forColor && board[21] == board[22] && board[22] == board[23] && board[23] == board[24] ||
-                board[22] == forColor && board[22] == board[23] && board[23] == board[24] && board[24] == board[25] ||
-                board[23] == forColor && board[23] == board[24] && board[24] == board[25] && board[25] == board[26] ||
-                board[24] == forColor && board[24] == board[25] && board[25] == board[26] && board[26] == board[27];
+        for (int i = 0; i < 22; i += 7) {
+            for (int j = i; j < i + 4; j++) {
+                if (board[j] == forColor && board[j] == board[j + 1] && board[j + 1] == board[j + 2] && board[j + 2] == board[j + 3]) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public enum Stone {
@@ -222,35 +214,152 @@ public class Connect4ArenaMain {
         }
     }
 
+    public static class Connect4AlphaBetaPlayer extends DefaultPlayer {
+
+        int bestMove = NOMOVE;
+
+        int cutOffNodeCount = 0;
+
+        int maxDepth;
+
+        ArrayList<Integer> possibleMoves;
+
+        public Connect4AlphaBetaPlayer(int depth) {
+            maxDepth = depth;
+        }
+
+        @Override
+        int play() {
+            long startTime = System.currentTimeMillis(); // start time of move
+
+            cutOffNodeCount = 0;
+
+            alphaBeta(myColor, board, maxDepth, -10000, 10000);  // alphaBeta player
+
+            long endTime = System.currentTimeMillis(); // end time of move
+            long duration = endTime - startTime; // calculate difference (move time)
+
+            System.out.println("\033[31m Execution time: " + duration + " milliseconds");
+            System.out.println("\033[34m Cut offs: " + cutOffNodeCount);
+
+            return bestMove;
+        }
+
+        private int alphaBeta(Stone myColor, Stone[] board, int depth, int alpha, int beta) {
+            setPossibleMoves();
+
+            // check if opponent wins
+            if (isWinning(board, myColor.opponent())) {
+                return -1000;  // we already lost :(
+            }
+
+            if (depth == 0 || possibleMoves.size() == 0) {
+                return rate(myColor); // rate move
+            }
+
+            int max = alpha;
+
+            // iterate through possible moves
+            for (int move : possibleMoves) {
+
+                board[move] = myColor; // play a stone
+
+                int currentValue = -alphaBeta(myColor.opponent(), board, depth - 1, -beta, -max);
+
+                board[move] = null; // revert the last move
+
+                if (depth == maxDepth) {
+                    System.out.printf("Index: " + move + " Value: " + currentValue + "\n");
+                }
+
+                if (currentValue > max) {
+                    max = currentValue;
+                    if (depth == maxDepth) {
+                        bestMove = move; // a bit of a hack: we have to return a position (not a score)
+                    }
+
+                }
+                if (max >= beta) {
+                    cutOffNodeCount++;
+                    break; // alpha-beta pruning
+                }
+            }
+            return max;
+        }
+
+        public void setPossibleMoves() {
+            possibleMoves = new ArrayList<>();
+            int row = 3;
+            for (int i = 0; i < 7; i++) {
+                //little hack to improve performance
+                //change sorting order
+                if (i % 2 == 0) {
+                    row += i;
+                } else {
+                    row -= i;
+                }
+                for (int j = row; j < 28; j += 7) {
+                    if (board[j] == null) {
+                        possibleMoves.add(j);
+                        break;
+                    }
+                }
+            }
+        }
+
+        public int rate(Stone myColor) {
+            int[] points = {3, 4, 6, 7, 6, 4, 3
+                    , 2, 4, 6, 7, 6, 4, 2
+                    , 2, 4, 6, 7, 6, 4, 2
+                    , 3, 4, 6, 7, 6, 4, 3
+            };
+            int totalPoints = 0;
+            for (int i = 0; i < 28; i++) {
+                if (board[i] == myColor) {
+                    totalPoints += points[i];
+                } else if (board[i] == myColor.opponent()) {
+                    totalPoints -= points[i];
+                }
+            }
+            return totalPoints;
+        }
+    }
+
     public static class Connect4MinMaxPlayer extends DefaultPlayer {
 
         int bestMove = NOMOVE;
 
         int nodeCount;
 
-        int maxDepth;
+        int cutOffNodeCount = 0;
 
-        int minimalDepth;
+        int maxDepth;
 
         ArrayList<Integer> possibleMoves;
 
         public Connect4MinMaxPlayer(int depth) {
-            super();
             maxDepth = depth;
         }
 
         @Override
         int play() {
-            int movesAvailable = countAvailableMoves();
-            minimalDepth = Math.min(movesAvailable, maxDepth);
+            long startTime = System.currentTimeMillis();
+
+            cutOffNodeCount = 0;
             possibleMoves = new ArrayList<>();
-            //getScore(myColor, minDepth);
-            alphaBeta(myColor, minimalDepth, Integer.MIN_VALUE, Integer.MAX_VALUE);
-            System.out.println(bestMove);
+
+            minMax(myColor, maxDepth); // min max Player
+
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+
+            System.out.println("\033[31m Execution time: " + duration + " milliseconds");
+            System.out.println("\033[34m Cut offs: " + cutOffNodeCount);
+
             return bestMove;
         }
 
-        long getScore(Stone myColor, int depth) {
+        long minMax(Stone myColor, int depth) {
             setPossibleMoves();
             nodeCount++;
 
@@ -271,7 +380,7 @@ public class Connect4ArenaMain {
                 if (board[i] == null) { // we can play here
                     board[i] = myColor; // play a stone
 
-                    var currentValue = -getScore(myColor.opponent(), depth - 1);
+                    var currentValue = -minMax(myColor.opponent(), depth - 1);
 
                     board[i] = null; // revert the last move
                     if (depth == maxDepth) {
@@ -288,62 +397,10 @@ public class Connect4ArenaMain {
             return bestValue;
         }
 
-        private int alphaBeta(Stone myColor, int depth, int alpha, int beta) {
-
-            nodeCount++;
-
-            if (isWinning(board, myColor.opponent())) {
-                return Integer.MIN_VALUE + 1;  // we already lost :(
-            }
-
-
-            if (depth == 0) {
-                return rate(myColor);
-            }
-
-            int max = alpha;
-            setPossibleMoves();
-
-            for (int move : possibleMoves) {
-
-                if (board[move] == null) { // we can play here
-                    board[move] = myColor; // play a stone
-
-                    int currentValue = -alphaBeta(myColor.opponent(), depth - 1, -beta, -max);
-
-                    board[move] = null; // revert the last move
-                    if (depth == minimalDepth) {
-                        System.out.printf("Index: " + move + " Value: " + currentValue + "\n");
-                    }
-
-                    if (currentValue > max) {
-                        max = currentValue;
-                        if (depth == minimalDepth) {
-                            bestMove = move; // a bit of a hack: we have to return a position (not a score)
-                        }
-                        if (max >= beta) {
-                            break; // alpha-beta pruning
-                        }
-                    }
-                }
-            }
-            return max;
-        }
-
-        private int countAvailableMoves() {
-            int moves = 0;
-            for (int i = 0; i < WIDTH * HEIGHT; i++) {
-                if (board[i] == null) {
-                    moves++;
-                }
-            }
-            return moves;
-        }
-
         public void setPossibleMoves() {
             possibleMoves = new ArrayList<>();
             for (int i = 0; i < 7; i++) {
-                for (int j = i; j < 27; j += 7) {
+                for (int j = i; j < 28; j += 7) {
                     if (board[j] == null) {
                         possibleMoves.add(j);
                         break;
@@ -353,7 +410,6 @@ public class Connect4ArenaMain {
         }
 
         public int rate(Stone myColor) {
-
             int[] points = {3, 4, 6, 7, 6, 4, 3
                     , 2, 4, 6, 7, 6, 4, 2
                     , 2, 4, 6, 7, 6, 4, 2
@@ -363,6 +419,8 @@ public class Connect4ArenaMain {
             for (int i = 0; i < 28; i++) {
                 if (board[i] == myColor) {
                     totalPoints += points[i];
+                } else if (board[i] == myColor.opponent()) {
+                    totalPoints -= points[i];
                 }
             }
             return totalPoints;

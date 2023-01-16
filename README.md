@@ -1,15 +1,21 @@
-# Connect Four Template
+# Connect 4
+## Aktueller Stand
 
-A start of a project implementing a variant of the game "Connect Four".
+Stand jetzt habe ich einen funktionierenden Min-Max und Alpha-Beta.
 
-## Mission
+### Funktionalitäten:
+- Die isWinning Methode ist korrekt und mittels for-loops umgesetzt
+- Der Code ist mit einigen Kommentaren zum Verständnis versehen.
+- Beim Alpha-Beta wird die benötigte Zeit sowie die Anzahl cut-offs angezeigt. 
+- Es sind mehrere JUnit-Tests vorhanden (Greedy vs. AlphaBeta / AlphaBeta vs. MinMax / AlphaBeta vs. AlphaBeta)
+- Dank einem kleinen Hack, indem der Alpha Beta die possibleMoves sortiert, wurde die Performance viel schneller als zuvor.
+## Probleme
 
-1. Extend the existing code such that the GreedyPlayer works.
-2. Implement a strong Opponent using MinMax/Negamax with fixed depth (like 10).
-3. Implement a perfect Player and optimize it for speed.
+Leider hatte ich lange Schwierigkeiten mit dem AlphaBeta. Er spielte ungefähr so wie ein GreedyPlayer und ich wusste nicht wieso. Herr von Känels Kommentar in Teams hat mir dann weitergeholfen. 
 
-## Resources
+## Ausblick
 
-- https://de.wikipedia.org/wiki/Minimax-Algorithmus#Implementierung
-- https://de.wikipedia.org/wiki/Alpha-Beta-Suche#Implementierung
-- https://en.wikipedia.org/wiki/Zobrist_hashing
+Wenn ich noch mehr Zeit gehabt hätte, würde ich weitere optimierungen anfangen.
+
+## Selbsteinschätzung
+5.5
